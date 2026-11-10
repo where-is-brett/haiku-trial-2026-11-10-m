@@ -30,9 +30,42 @@ export function readStatement(text) {
       throw new NotAStatement(`Line ${lineNumber} needs three fields: Date, Description, Amount.`);
     }
     const [date, description, amount] = fields;
-    rows.push({ date: parseDate(date), description, cents: parseAmount(amount) });
+    const isoDate = parseDate(checkDate(date, lineNumber));
+    const cents = parseAmount(checkAmount(amount, lineNumber));
+    rows.push({ date: isoDate, description, cents });
   });
   return rows;
+}
+
+// Returns the date field if it is a real day written DD/MM/YYYY, or refuses the line.
+function checkDate(field, lineNumber) {
+  const text = field.trim();
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text);
+  if (match) {
+    const day = Number(match[1]);
+    const month = Number(match[2]);
+    const year = Number(match[3]);
+    const date = new Date(0);
+    date.setUTCFullYear(year, month - 1, day);
+    if (date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day) {
+      return text;
+    }
+  }
+  throw new NotAStatement(`Line ${lineNumber} isn't a valid date: ${text}.`);
+}
+
+// Returns the amount field if it is a number, optionally inside one matched pair of brackets, or refuses the line.
+function checkAmount(field, lineNumber) {
+  const text = field.trim();
+  const bracketed = text.startsWith('(');
+  if (bracketed !== text.endsWith(')')) {
+    throw new NotAStatement(`Line ${lineNumber} isn't a valid amount: ${text}.`);
+  }
+  const inner = bracketed ? text.slice(1, -1) : text;
+  if (/^-?([0-9]{1,3}(,[0-9]{3})*|[0-9]+)(\.[0-9]+)?$/.test(inner)) {
+    return text;
+  }
+  throw new NotAStatement(`Line ${lineNumber} isn't a valid amount: ${text}.`);
 }
 
 // Splits one CSV line into fields. A field may be double-quoted; "" inside quotes is one ".

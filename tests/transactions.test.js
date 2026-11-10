@@ -2,7 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { ensureSchema, setCategory } from '../src/lib/transactions.js';
+import { ensureSchema, setCategory, getTransaction } from '../src/lib/transactions.js';
 
 const OLD_TABLE =
   'CREATE TABLE transactions (id INTEGER PRIMARY KEY, date TEXT, description TEXT, cents INTEGER)';
@@ -77,4 +77,27 @@ test('an id given as text finds the same row', () => {
 test('an unknown id throws', () => {
   const db = seededDb();
   assert.throws(() => setCategory(db, 99, 'bills'), /No transaction with id 99/);
+});
+
+test('a stored category is read back', () => {
+  const db = seededDb();
+  setCategory(db, 1, 'bills');
+  assert.equal(getTransaction(db, 1).category, 'bills');
+});
+
+test("a row with no category reads the rule's category", () => {
+  const db = seededDb();
+  assert.equal(getTransaction(db, 1).category, 'groceries');
+});
+
+test('a row with no description and no category reads other', () => {
+  const db = new DatabaseSync(':memory:');
+  ensureSchema(db);
+  db.exec("INSERT INTO transactions (date, description, cents) VALUES ('2026-08-05', NULL, 300)");
+  assert.equal(getTransaction(db, 1).category, 'other');
+});
+
+test('an id matching no row reads as null', () => {
+  const db = seededDb();
+  assert.equal(getTransaction(db, 99), null);
 });

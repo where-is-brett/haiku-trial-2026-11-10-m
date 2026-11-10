@@ -1,7 +1,5 @@
 # Store a category per transaction Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
-
 **Goal:** Each transaction can hold a category. Old databases gain the column and keep their rows; a chosen category is read back; an unchosen one falls back to the rule's category; an unknown key or id is refused.
 
 **Architecture:** A new `src/lib/transactions.js` owns the `transactions` table's category column: `ensureSchema` adds the column when missing, `setCategory` validates and writes, `getTransaction` reads and falls back to `categoryOf`. No page or route changes in this slice; `src/server.js` is not touched.
